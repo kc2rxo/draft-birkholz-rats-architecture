@@ -51,6 +51,15 @@ author:
   code: ""
   city: ""
   country: USA
+- ins: A. Wiethuechter
+  name: Adam Wiethuechter
+  org: Critical Technologies Inc.
+  abbrev: CTI
+  email: adam.wiethuechter@critical.com
+  street: ""
+  code: ""
+  city: ""
+  country: USA
 
 normative:
   RFC2119:
@@ -63,10 +72,10 @@ informative:
 --- abstract
 
 Remote ATtestation ProcedureS (RATS), such as Remote Integrity VERification (RIVER), the creation of Entity Attestation Tokens (EAT), software integrity Measurement And ATtestation (MAAT), or the attestation of device characteristics, in general, are based on specific operations and qualities provided by hardware and software.
-The RATS architecture maps corresponding functions and operational capabilities to specific RATS Roles.
+The RATS Architecture maps corresponding functions and operational capabilities to specific RATS Roles.
 The goal is to enable an appropriate conveyance of believable evidence about device health or trusted claims about device capabilities via network protocols.
 The flows of data between these roles depends on the composition of RATS Roles and their location with respect to devices or services.
-The RATS architecture provides these roles as building blocks to enable suitable composition, while remaining hardware-agnostic with respect to the evidence on trustworthiness conveyed.
+The RATS Architecture provides these roles as building blocks to enable suitable composition, while remaining hardware-agnostic with respect to the evidence on trustworthiness conveyed.
 This flexibility is intended to address a significant majority of use-cases or usage scenarios in the domain of RATS.
 Examples include, but are not limited to: financial transactions, voting machines, critical safety systems, network equipment health, or trustworthy end-user device management.
 
@@ -88,9 +97,32 @@ In essence, RATS are used to enable the assessment of the trustworthiness of a c
 
 ## The purpose of RATS Architecture and Terminology
 
-To consolidate the utilization of existing and emerging network protocols in the context of RATS, this document provides a detailed definition of Attestation Terminology that enables interoperability between different types pf RATS.
+To consolidate the utilization of existing and emerging network protocols in the context of RATS, this document provides a detailed definition of Attestation Terminology that enables interoperability between different types of RATS.
 Specifically, this document illustrates and remediates the impedance mismatch of terms related to Remote Attestation Procedures used in different domains today.
 As an additional contribution, new terms defined by this document provide a common basis that simplifies future work on RATS in the IETF and beyond.
+
+## Trust and Trustworthiness
+
+{{RFC4949}} provides definitions that highlight the difference between a "trusted system" and a "trustworthy system".
+The following definitions exclude the explicit specialization of concepts that are "environmental disruption" as well as "human user and operator errors".
+
+A trusted system in the context of RATS "operates as expected, according to design and policy, doing what is required and not doing other things" {{RFC4949}}.
+A trustworthy system is a system "that not only is trusted, but also warrants that trust because the system's behavior can be validated in some convincing way, such as through formal analysis or code review" {{RFC4949}}.
+
+The goal of RATS is to convey information about system component characteristics, such as integrity or authenticity, that can be appraised in a convincing way.
+
+RATS require trust relationships with third parties that qualify assertions about, for example, origin of data, the manufacturer or the capabilities of a system, or the origination of attestation evidence (attestation provenance).
+Without trusted authorities (e.g. a certificate authority) it is virtually impossible to assess the level of assurance (or resulting level of confidence, correspondingly) of information produced by RATS.
+Trusting a system does not make it trustworthy.
+Assessing trustworthiness requires the conveyance of evidence that a system is a trustworthy system, which has to originate from the system itself and has to be convincing.
+If the convincing information is not originating from the system itself, it comprises trusted claim sets and not evidence.
+In essence, the attestation provenance of attestation evidence is the system that intends to present its trustworthiness in a believable manner.
+
+The essential basis for trust in the information created via RATS are roots of trust.
+
+Roots of trust are defined by the NIST special publication 800-164 draft as "security primitives composed of hardware, firmware and/or software that provide a set of trusted, security-critical functions.
+They must always behave in an expected manner because their misbehavior cannot be detected.
+As such, RoTs need to be secured by their design. Hardware RoTs are preferred over software RoTs due to their immutability, smaller attack surface, and more reliable behavior."
 
 ## Requirements notation
 
@@ -114,7 +146,6 @@ The RATS architecture specifies:
 * the means to prove, preserve and convey trust properties, such as identity, varacity, freshness, or provenance, and
 * primitives necessary for the construction of interoperable attestation payloads.
 
-
 # Architectural Components
 
 The basic architectural components defined in this document are:
@@ -124,15 +155,39 @@ The basic architectural components defined in this document are:
 * RATS Duties
 * RATS Interactions
 
-The following sub-section define and elaborate on these terms:
+The following sub-sections define and elaborate on these terms:
 
 ## RATS Roles
 
-A Role in the context of usage scenarios for remote attestation procedures is providing a service to other Roles. Roles are  building blocks that can be providers and consumers of information.
+A Role, in the context of usage scenarios for remote attestation procedures, is providing a service to other roles. Roles are building blocks that can be providers and consumers of information.
 In the RATS architecture, devices or services can take on RATS roles.
-They are  composites of internal functions (RATS Duties) and external functions (RATS Interactions) that facilitate a required (sometimes optional) task in a remote attestation procedure.
+They are composites of internal functions (RATS Duties) and external functions (RATS Interactions) that facilitate a required (sometimes optional) task in a remote attestation procedure.
 
-The base set of RATS roles is:
+There are six roles defined in the RATS Architecture. i{{figalllevels}} provides a simplified overview of the roles defined in this section.
+
+{:rats: artwork-align="center"}
+
+~~~~ RATS
++------------+                     +------------------+
+|            |                     |                  |
+|  Attester  |                  +->|  Verifier        |
+|            |                  |  |                  |
++------------+                  |  +------------------+
+      ^                         |
+      |                         |  +------------------+
+      |     +----------------+  |  |                  |
+      +---->|                |<-+  |  Authentication  |
+            |  Interconnect  |<--->|  Checker         |
+      +---->|                |<-+  |                  |
+      |     +----------------+  |  +------------------+
+      v                         |
++------------+                  |  +------------------+
+|            |                  |  |                  |
+|  Claimant  |                  +->|  Relying Party   |
+|            |                     |                  |
++------------+                     +------------------+
+~~~~
+{:rats #figalllevels title="Overall Relationships of Roles in the RATS Architecture"}
 
 Claimant:
 
@@ -141,21 +196,21 @@ Claimant:
 It is not guaranteed that a Verifier Role can appraise the output of a Claimant via reference values (in contrast to the output of an Attester).
 
 Examples of Claimant assertions include:
-* The hardware, firmware and software components of the Attester.
-* The manufactuer of Attester components.
-* The Attester's current configuration.
-* The Attester's current location - e.g. GPS coordinates.
-* The method by which binding of an attester to an RTR.
-* The identifier(s) available for identifying and authenticating the Attester - e.g. Universal Entity ID (UEID).
+* The hardware, firmware and software components of the Attester,
+* The manufactuer of Attester components,
+* The Attester's current configuration,
+* The Attester's current location - e.g. GPS coordinates,
+* The method by which binding of an attester to an root of trust for reporting (RTR),
+* The identifier(s) available for identifying and authenticating the Attester - e.g. Universal Entity ID (UEID)
 
 Attester:
 
-: The producer of attestation evidence that has a root of trust for reporting (RTR) and implements a conveyance protocol, authenticates using an attestation credential, consumes assertions about itself and presents it to a consumer of evidence (e.g. a relying party or a verifier). Every output of an attester can be appraised via reference values.
+: The producer of attestation evidence that has a RTR and implements a conveyance protocol, authenticates using an attestation credential, consumes assertions about itself and presents it to a consumer of evidence (e.g. a Relying Party or a Verifier). Every output of an Attester can be appraised via reference values.
 
-;Interconnect:
-;
-;: A communication channel or secure path between systems that take on RATS roles.
-;Attestation evidence, for example, can be conveyed from an attester to a verifier via an interconnect.
+Interconnect:
+
+: A communication channel or secure path between systems that take on RATS roles.
+Attestation evidence, for example, can be conveyed from an attester to a verifier via an interconnect.
 Examples include: GPIO pins, an USB link, or the Internet.
 
 Authentication Checker:
@@ -165,14 +220,61 @@ In certain environments, an Authentication Checker can assess a system's trustwo
 
 Verifier:
 
-: The consumer of attestation evidence that has a root of trust for verification (RTV), implements conveyance protocols, appraises attestation evidence against reference values or policies, and makes verification results available to relying parties.
+: The consumer of attestation evidence that has a root of trust for verification (RTV), implements conveyance protocols, appraises attestation evidence against reference values or policies, and makes verification results available to Relying Parties.
 
 Relying Party:
 
 : The consumer and assessor of verifier or Authentication Checker results for the purpose of improved risk management, operational efficiency, security, privacy (natural or legal person) or safety.
-The verifier and/or authentication checker roles and the relying party role may be tightly integrated.
+The Verifier and/or Authentication Checker roles and the Relying Party role may be tightly integrated.
 
-# RATS Actors
+### Exemplary Composition of Roles
+
+In order to provide an intuitive understanding how the roles used in RATS can be composed into work-flows, this document provides a few example work-flows. Boxes in the following examples that include more than one role are systems that take on more than one role.
+
+#### Conveyance of Trusted Claim Sets Validated by Signature
+
+If there is a trust relationship between a trusted third party that can assert that signed claims created by a claimant guarantee a trustworthy origination of claim, the work-flow depicted in {{cosecwt}} can facilitate a trust-based implicit remote attestation procedure. The information conveyed are signed claim sets that are trusted via an authoritative third party. In this work-flow claim emission is triggered by the claimant. Variations based on requests emitted by the relying party can be easily facilitated by the same set of roles.
+
+~~~~
+                                    +---------------------------------------+
+                                    |                                       |
+                                    |  +------------------+  +-----------+  |
++------------+  +----------------+  |  |                  |  |           |  |
+|            |  |                |  |  |  Authentication  |  |  Relying  |  |
+|  Claimant  |->|  Interconnect  |--+->|  Checker         |->|  Party    |  |
+|            |  |                |  |  |                  |  |           |  |
++------------+  +----------------+  |  +------------------+  +-----------+  |
+                                    |                                       |
+                                    +---------------------------------------+
+~~~~
+{:rats #cosecwt title="Conveyance of Trusted Claim Sets Validated by Signature"}
+
+#### Conveyance of Attestation Evidence Appraised by a Verifier
+
+If there is trust in the root of trust for reporting based on the assertions of a trusted third party, the work-flow depicted in {{evidence}} can facilitate an evidence-based explicit remote attestation procedure. The information conveyed is signed attestation evidence that is created by the trusted verifier. In this work-flow claims do not necessarily have to be signed and the work-flow is triggered by the attestor that aggregates claims from a root of trust of measurement. Variations based on requests emitted by the verifier can be easily facilitated by the same set of roles.
+
+~~~~
++------------------+                      +------------------------+
+|                  |                      |  +------------------+  |
+|  +------------+  |  +----------------+  |  |                  |  |
+|  |            |  |  |                |  |  |  Authentication  |  |
+|  |  Attester  |--+->|  Interconnect  |--+->|  Checker         |  |
+|  |            |  |  |                |  |  |                  |  |
+|  +------------+  |  +----------------+  |  +------------------+  |
+|        ^         |  +-------------------+            |           |
+|        |         |  |                                |           |
+|        |         |  |   +-----------+                v           |
+|  +-----+------+  |  |   |           |          +------------+    |
+|  |            |  |  |   |  Relying  |          |            |    |
+|  |  Claimant  |  |  |   |  Party    |<---------|  Verifier  |    |
+|  |            |  |  |   |           |          |            |    |
+|  +------------+  |  |   +-----------+          +------------+    |
+|                  |  |                                            |
++------------------+  +--------------------------------------------+
+~~~~
+{:rats #evidence title="Conveyance of Attestation Evidence Appraised by a Verifier"}
+
+## RATS Actors
 RATS Actors may be any entity, such as an user, organization, execution environment, device or service provider, that takes on (implements) one or more RATS Roles and performs RATS Duties and/or RATS Interactions.
 RATS Interactions occur between RATS Actors. The methods whereby RATS Actors are identified, discovered, and connectivity established are out-of-scope for this architecture. In contrast, if multiple RATS Roles reside on a single RATS Actor, the definition of RATS Interactions is out-of-scope of the RATS architecture, if no network protocols are required.
 
@@ -187,7 +289,7 @@ Interactions between RATS Roles belonging to the same RATS Actor are generally b
 
 ## RATS Duties
 
-A RATS Role can take on one ore more duties. RATS Duties are role-internal functions that do not require interaction with other RATS Roles. In general, and RATS Duties are typically associated with a RATS Role. The list presented in this document is exhaustive. Also, there can be usage scenario where RATS Duties are associated with other RATS Roles than illustrated below:
+A RATS Role can take on one or more duties. RATS Duties are role-internal functions that do not require interaction with other RATS Roles. In general, RATS Duties are typically associated with a RATS Role. The list presented in this document is exhaustive. Also, there can be usage scenario where RATS Duties are associated with other RATS Roles than illustrated below:
 
 ### Attester Duties
 
@@ -214,7 +316,7 @@ A RATS Role can take on one ore more duties. RATS Duties are role-internal funct
 * Compare trust policies to attestation-results based on assertions or evidence
 * Enforce policies or create input for risk engines
 
-### RATS Interactions
+## RATS Interactions
 
 Devices are typically composite devices (in the case of atomically integrated devices that would result in a composite device with one component).
 Services are software components - e.g. a daemon, a virtual network function (vnf) or a network security function (nsf) - that can reside on one or more devices and are not necessarily bound to a specific set of devices.
@@ -227,159 +329,30 @@ Systems that take on RATS roles:
 
 Systems can be distinguished on the management plane via identity documents (which includes specific claim sets about device characteristics, see RFC4949) or via trusted claim sets (e.g. the Entity Attestation Token) and can be addressed by network protocols via IP addresses.
 RATS can be used in environments without network protocols and RATS roles can be used to design work-flows in these domains, correspondingly.
-However, the primary focus of the RATS architecture is to facilitate network protocols between RATS roles that convey information via the Internet Protocol.
+However, the primary focus of the RATS Architecture is to facilitate network protocols between RATS roles that convey information via the Internet Protocol.
 
 Relevant decision-factors that influence the composition of RATS roles on systems and resulting work-flows are (amongst others):
 
 * which role (or correspondingly, which system that is taking on specific RATS roles) is triggering a Remote Attestation Procedure
-* which entities are involved in a Remote Attestation Procedure (e.g. the attester itself, trusted third parties, specific trust anchors, or other sources of assertions)
+* which entities are involved in a Remote Attestation Procedure (e.g. the Attester itself, trusted third parties, specific trust anchors, or other sources of assertions)
 * the capabilities of the protocols used (e.g. challenge-response based, RESTful, uni-directional)
 * the security requirements and security capabilities of systems in a domain of application
 * the risks and corresponding threats that are intended to be mitigated
 
-## Trust and Trustworthiness
+### Trust and Trustworthiness
 
-{{RFC4949}} provides definitions that highlight the difference between a "trusted system" and a "trustworthy system".
-The following definitions exclude the explicit specialization of concepts that are "environmental disruption" as well as "human user and operator errors".
+[ATW: I think there needs to be another home for this bit - seeing as I moved the original text to the Section 1, but this part doesn't fit there.]
 
-A trusted system in the context of RATS "operates as expected, according to design and policy, doing what is required and not doing other things" {{RFC4949}}.
-A trustworthy system is a system "that not only is trusted, but also warrants that trust because the system's behavior can be validated in some convincing way, such as through formal analysis or code review" {{RFC4949}}.
+If the root of trust involved is a root of trust for measurement (RTM), the producer of information takes on the role of a Asserter.
+An Asserter can also make use of a root of trust for integrity (RTI) in order to increase the level of assurance in the assertions produced.
+If the root of trust involved is a root of trust for reporting (RTR), the producer of information takes on the role of an Attester.
 
-The goal of RATS is to convey information about system component characteristics, such as integrity or authenticity, that can be appraised in a convincing way.
+### Claims and Evidence
 
-RATS require trust relationships with third parties that qualify assertions about, for example, origin of data, the manufacturer or the capabilities of a system, or the origination of attestation evidence (attestation provenance).
-Without trusted authorities (e.g. a certificate authority) it is virtually impossible to assess the level of assurance (or resulting level of confidence, correspondingly) of information produced by RATS.
-Trusting a system does not make it trustworthy.
-Assessing trustworthiness requires the conveyance of evidence that a system is a trustworthy system, which has to originate from the system itself and has to be convincing.
-If the convincing information is not originating from the system itself, it comprises trusted claim sets and not evidence.
-In essence, the attestation provenance of attestation evidence is the system that intends to present its trustworthiness in a believable manner.
+The RATS Asserter Role produces measurements about the system’s characteristics in the form of signed (sometimes un-signed) claim sets in order to convey information.
+A secret signing key is required for this procedure, which is typically stored in a shielded location that can be trusted, for example, via a root of trust for storage (RTS). The trust with respect to this origination is based on a root of trust for reporting.
 
-The essential basis for trust in the information created via RATS are roots of trust.
-
-Roots of trust are defined by the NIST special publication 800-164 draft as "security primitives composed of hardware, firmware and/or software that provide a set of trusted, security-critical functions.
-They must always behave in an expected manner because their misbehavior cannot be detected.
-As such, RoTs need to be secured by their design. Hardware RoTs are preferred over software RoTs due to their immutability, smaller attack surface, and more reliable behavior."
-
-If the root of trust involved is a root of trust for measurement (RTM), the producer of information takes on the role of a asserter.
-An asserter can also make use of a root of trust for integrity (RTI) in order to increase the level of assurance in the assertions produced.
-If the root of trust involved is a root of trust for reporting (RTR), the producer of information takes on the role of an attester.
-
-## Claims and Evidence
-
-The RATS asserter role produces measurements about the system’s characteristics in the form of signed (sometimes un-signed) claim sets in order to convey information.
-A secret signing key is required for this procedure, which is typically stored in a shielded location that can be trusted, for example, via a root of trust for storage (RTS).
-
-The RATS attester role produces signed attestation evidence in order to convey information.
-The secret key required for this procedure is stored in a shielded location that only allows access to that key, if a specific operational state of the system is met.
-The trust with respect to this origination is based on a root of trust for reporting.
-
-## RATS Roles
-
-There are six roles defined in the RATS architecture. i{{figalllevels}} provides a simplified overview of the roles defined in this section.
-
-{:rats: artwork-align="center"}
-
-~~~~ RATS
-+------------+                     +------------------+
-|            |                     |                  |
-|  Attester  |                  +->|  Verifier        |
-|            |                  |  |                  |
-+------------+                  |  +------------------+
-      ^                         |
-      |                         |  +------------------+
-      |     +----------------+  |  |                  |
-      +---->|                |<-+  |  Authentication  |
-            |  Interconnect  |<--->|  Checker         |
-      +---->|                |<-+  |                  |
-      |     +----------------+  |  +------------------+
-      v                         |
-+------------+                  |  +------------------+
-|            |                  |  |                  |
-|  Claimant  |                  +->|  Relying Party   |
-|            |                     |                  |
-+------------+                     +------------------+
-~~~~
-{:rats #figalllevels title="Overall Relationships of Roles in the RATS Architecture"}
-
-
-Attester:
-
-: The producer of attestation evidence that has a root of trust for reporting (RTR) and implements a conveyance protocol, authenticates using an attestation credential, consumes assertions about itself and presents it to a consumer of evidence (e.g. a relying party or a verifier). Every output of an attester can be appraised via reference values.
-
-Claimant:
-
-: The producer of measurements or assertions to certain properties regarding the trustworthiness of a system’s characteristics that has a root of trust for measurement.
-It is not guaranteed that a verifier can appraise the output of a claimant via reference values.
-Examples of claim output include: the binding of an attester to an RTR, GPS coordinates set of integrity measurements, or an Universal Entity ID (UEID).
-
-Interconnect:
-
-: A communication channel or secure path between systems that take on RATS roles.
-Attestation evidence, for example, can be conveyed from an attester to a verifier via an interconnect.
-Examples include: GPIO pins, an USB link, or the Internet.
-
-Relying Party:
-
-: The consumer and assessor of verifier or Authentication Checker results for the purpose of improved risk management, operational efficiency, security, privacy (natural or legal person) or safety.
-The verifier and/or authentication checker roles and the relying party role may be tightly integrated.
-
-Authentication Checker:
-
-: The consumer of signed assertions such as trusted claim sets or attestation evidence that assesses the trustworthiness or other trust relationships of the information consumed via trusted third parties or external trust authorities, such as a privacy certificate authority.
-In certain environments, an Authentication Checker can assess a system's trustworthiness via external trust anchors, implicitly.
-
-Verifier:
-
-: The consumer of attestation evidence that has a root of trust for verification and implements a conveyance protocol, appraises attestation evidence against reference values or policies and makes verification results available to relying parties.
-
-## Exemplary Composition of Roles
-
-In order to provide an intuitive understanding how the roles used in RATS can be composed into work-flows, this document provides a few example work-flows. Boxes in the following examples that include more than one role are systems that take on more than one role.
-
-### Conveyance of Trusted Claim Sets Validated by Signature
-
-If there is a trust relationship between a trusted third party that can assert that signed claims created by a claimant guarantee a trustworthy origination of claim, the work-flow depicted in {{cosecwt}} can facilitate a trust-based implicit remote attestation procedure. The information conveyed are signed claim sets that are trusted via an authoritative third party. In this work-flow claim emission is triggered by the claimant. Variations based on requests emitted by the relying party can be easily facilitated by the same set of roles.
-
-~~~~
-                                    +---------------------------------------+
-                                    |                                       |
-                                    |  +------------------+  +-----------+  |
-+------------+  +----------------+  |  |                  |  |           |  |
-|            |  |                |  |  |  Authentication  |  |  Relying  |  |
-|  Claimant  |->|  Interconnect  |--+->|  Checker         |->|  Party    |  |
-|            |  |                |  |  |                  |  |           |  |
-+------------+  +----------------+  |  +------------------+  +-----------+  |
-                                    |                                       |
-                                    +---------------------------------------+
-~~~~
-{:rats #cosecwt title="Conveyance of Trusted Claim Sets Validated by Signature"}
-
-### Conveyance of Attestation Evidence Appraised by a Verifier
-
-If there is trust in the root of trust for reporting based on the assertions of a trusted third party, the work-flow depicted in {{evidence}} can facilitate an evidence-based explicit remote attestation procedure. The information conveyed is signed attestation evidence that is created by the trusted verifier. In this work-flow claims do not necessarily have to be signed and the work-flow is triggered by the attestor that aggregates claims from a root of trust of measurement. Variations based on requests emitted by the verifier can be easily facilitated by the same set of roles.
-
-~~~~
-+------------------+                      +------------------------+
-|                  |                      |  +------------------+  |
-|  +------------+  |  +----------------+  |  |                  |  |
-|  |            |  |  |                |  |  |  Authentication  |  |
-|  |  Attester  |--+->|  Interconnect  |--+->|  Checker         |  |
-|  |            |  |  |                |  |  |                  |  |
-|  +------------+  |  +----------------+  |  +------------------+  |
-|        ^         |  +-------------------+            |           |
-|        |         |  |                                |           |
-|        |         |  |   +-----------+                v           |
-|  +-----+------+  |  |   |           |          +------------+    |
-|  |            |  |  |   |  Relying  |          |            |    |
-|  |  Claimant  |  |  |   |  Party    |<---------|  Verifier  |    |
-|  |            |  |  |   |           |          |            |    |
-|  +------------+  |  |   +-----------+          +------------+    |
-|                  |  |                                            |
-+------------------+  +--------------------------------------------+
-~~~~
-{:rats #evidence title="Conveyance of Attestation Evidence Appraised by a Verifier"}
-
-## The Scope of RATS
+# The Scope of RATS
 
 During its evolution, the term Remote Attestation has been used in multiple contexts and multiple scopes and in consequence accumulated various connotations with slightly different semantic meaning.
 Correspondingly, Remote Attestation Procedures (RATS) are employed in various usage scenarios and different environments.
@@ -398,7 +371,7 @@ insight on how Attestation procedures are vital to ongoing work in the IETF (e.g
 The definitions in the section about RATS are still self-describing in this version. Additional
 explanatory text will be added to provide more context and coherence.
 
-### The Lying Endpoint Problem
+## The Lying Endpoint Problem
 
 A very prominent goal of RATS is to address the "lying endpoint problem".
 The lying endpoint problem is characterized as a condition of a Computing Context where the information or behavior embedded, created, relayed, stored, or emitted by the Computing Context is not "correct" according to expectations of the authorized system designers, operators and users.
@@ -416,12 +389,12 @@ The approach is based, for example, on the assumption that if attestation eviden
 In contrast, such Evidence has to be impossible to create if the software instances used in a Computing Context are compromised.
 Attestation activities that are intended to create this Evidence therefore also provide guarantees about the validity of the Evidence they can create.
 
-### How the RATS Architecture Addresses the Lying Endpoint Problem
+## How the RATS Architecture Addresses the Lying Endpoint Problem
 
 RATS imply the involvement of at least two players (roles) who seek to overcome the lying endpoint problem.
 The Verifier wishes to consume application data supplied by a Computing Context.
 But before application data is consumed, the Verifier obtains Attestation Evidence about the Computing Context to assess likelihood of poisoned data due to endpoint compromise or failure.
-Remote Attestation argues that a systems's integrity characteristics should not be believed until rationale for believability is presented to the relying party seeking to interact with the system.
+Remote Attestation argues that a systems's integrity characteristics should not be believed until rationale for believability is presented to the Relying Party seeking to interact with the system.
 
 An Interconnect defines an untrusted channel between subject and object wherein the rationale for believability is securely exchanged. The type of interconnect technology could vary widely, ranging from GPIO pins, to a PC peripheral IO bus, to the Internet, to a direct physical connection, to a wireless radio-receiver association, or to a world wide mesh of peers. In other words, virtually every kind communication path could be used as the "Interconnect" in RATS. In fact, a single party could take on all roles at the same time (e.g. Self Encrypting Devices).
 
